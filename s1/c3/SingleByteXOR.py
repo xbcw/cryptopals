@@ -56,26 +56,45 @@ FREQUENCY = {
 	        '*': 0.0197,
 	        '!': 0.023,
 	        '@': 0.0229,
+	        '=': 0.01,
 	        '.': 0.0231,
 	        '_': 0.014,
 	        '$': 0.014,
 	        '#': 0.013,
 	        ',': 0.01,
 	        '\\': 0.009,
+	        '/': 0.009,
 	        '-': 0.002,
 	        '&': 0.001,
 	        '`': 0.001,
-	        ' ': 12.75
+	        '<': 0.001,
+	        '>': 0.001,
+	        '+': 0.001,
+	        '{': 0.001,
+	        '}': 0.001,
+	       	':': 0.001,
+	        ' ': 12.8,
+	        '\n': 8.0,
+	        '1': 1.0,
+	        '2': 1.0,
+	        '3': 1.0,
+	        '4': 1.0,
+	        '5': 1.0,
+	        '6': 1.0,
+	        '7': 1.0,
+	        '8': 1.0,
+	        '9': 1.0,
+	        '0': 1.0,
 			}
 
 def main(argv):
 	print single_byte_xor(argv[1])
 
 def single_byte_xor(input_string):
-    high_score = 0
+    high_score = 0.0
     best_char = 0
     best_string = ''
-    for i in range(ord('0'), ord('z')):
+    for i in range(ord(' '), ord('z')):
 		try_string = ''.join(chr(ord(a) ^ ord(chr(i))) for a in input_string.decode('hex'))
 		current_score = score(try_string)
 		if current_score > high_score:
@@ -87,7 +106,7 @@ def single_byte_xor(input_string):
 
 def score(input_string):
 
-	score = 0
+	score = 0.0
 	for i in input_string:
 		if i in FREQUENCY:
 			score += FREQUENCY[i]
