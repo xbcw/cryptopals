@@ -1,4 +1,4 @@
-import sys
+import operator
 
 FREQUENCY = {
 			'a': 8.167,
@@ -87,30 +87,53 @@ FREQUENCY = {
 	        '0': 1.0,
 			}
 
-def main(argv):
-	print single_byte_xor(argv[1])
-
-def single_byte_xor(input_string):
-    high_score = 0.0
-    best_char = 0
-    best_string = ''
-    for i in range(ord(' '), ord('z')):
-		try_string = ''.join(chr(ord(a) ^ ord(chr(i))) for a in input_string.decode('hex'))
-		current_score = score(try_string)
-		if current_score > high_score:
-			high_score = current_score
-			best_char = chr(i)
-			best_string = try_string
-#	print "'%s' : %s\n%s" % (chr(i), score(try_string), try_string)
-    return best_string, best_char, high_score
-
-def score(input_string):
-
+# Returns score based on English letter frequency
+def frequency_score(input_string):
 	score = 0.0
 	for i in input_string:
 		if i in FREQUENCY:
 			score += FREQUENCY[i]
 	return score
 
-if __name__ == "__main__":
-	main(sys.argv)
+# Returns number of differing bits between two equal length strings
+def hamming_distance(str1, str2):
+	bin_str1 = format(int(str1.encode('hex'), 16), '#0512b')
+	bin_str2 = format(int(str2.encode('hex'), 16), '#0512b')
+	distance = 0.0
+	for x in range(0, len(bin_str1)):
+		if bin_str1[x] is not bin_str2[x]:
+			distance += 1.0
+	return distance
+
+# returns the dataset broken into keysize blocks
+def get_keysized_blocks(ciphertext, keysize):
+	blocks = []
+	for x in range(0, len(ciphertext)/keysize):
+		blocks.append(''.join(ciphertext[keysize*x:keysize*(x+1)]))
+	return blocks
+
+# takes all the characters of a block of strings and places them in blocks based on position
+def transpose_blocks(blocks):
+	result = []
+	for block in blocks:
+		for i in range(0, len(blocks[0])):
+			if len(result) <= i:
+				result.append(block[i])
+			else:
+				result[i] += block[i]
+	return result
+
+# guesses keysize for a ciphertext
+def get_keysize(ciphertext):
+	scores = {}
+	for keysize in range(2, 40):
+		result = 0
+		samples = 10
+		for i in range(0, samples):
+			result += hamming_distance(ciphertext[keysize*i:keysize*(i+1)], ciphertext[keysize*(i+1):keysize*(i+2)])
+
+		scores[keysize] = (result/samples)/keysize
+
+	sorted_scores = sorted(scores.items(), key=operator.itemgetter(1))
+
+	return sorted_scores
