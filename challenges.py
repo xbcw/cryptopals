@@ -87,7 +87,8 @@ def c3():
 @challenge(4)
 def c4():
 	filename = "data/4.txt"
-	result = cryptopals.detect_single_char_xor(filename)
+	ciphertext = utils.get_ciphertext(filename)
+	result = cryptopals.detect_single_char_xor(ciphertext)
 	print "Key:     " + result[1]
 	print "Score:   " + str(result[2])
 	print "String:  " + result[0]
@@ -108,7 +109,8 @@ def c6():
 	expect(37.0, result)
 
 	filename = "data/6.txt"
-	result = cryptopals.break_repeating_key_xor(filename)
+	ciphertext = utils.get_ciphertext(filename)
+	result = cryptopals.break_repeating_key_xor(ciphertext)
 	print
 	print result[1]
 	print result[0]
@@ -118,12 +120,14 @@ def c6():
 def c7():
 	key = "YELLOW SUBMARINE"
 	filename = "data/7.txt"
-	print cryptopals.decrypt_aes_ecb(filename, key)
+	ciphertext = utils.get_ciphertext(filename).decode('Base64')
+	print cryptopals.decrypt_aes_ecb(ciphertext, key)
 
 @challenge(8)
 def c8():
 	filename = "data/8.txt"
-	print cryptopals.detect_aes_ecb(filename)
+	ciphertext = utils.get_ciphertext(filename)
+	print cryptopals.detect_aes_ecb(ciphertext)
 
 @challenge(9)
 def c9():
@@ -139,11 +143,16 @@ def c10():
 	filename = "data/10.txt"
 	key = "YELLOW SUBMARINE"
 	iv = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-	print cryptopals.decrypt_aes_cbc(filename, key, iv).decode('hex')
+	ciphertext = utils.get_ciphertext(filename).decode('base64')
+	print cryptopals.decrypt_aes_cbc(ciphertext, key, iv)
 
 @challenge(11)
 def c11():
-	input_string = "MEANINGLESS JIBBER JABBER"
+	cipher = cryptopals.encrypt_random_aes
+	if cryptopals.repeated_block(cipher):
+		print "Detected ECB Mode"
+	else:
+		print "Detected CBC Mode"
 
 if __name__ == "__main__":
 	main(sys.argv)

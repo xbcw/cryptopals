@@ -1,6 +1,8 @@
 import sys
 import utils
 import struct
+import os
+import random
 from Crypto.Cipher import AES
 
 def hex_to_base64(input_string):
@@ -28,14 +30,10 @@ def single_byte_xor(input_string):
 			best_string = try_string
 	return best_string, best_char, high_score
 
-def detect_single_char_xor(filename):
-	try:
-		file = open(filename, 'r')
-	except Exception as e:
-		print "Error: %s" % str(e)
+def detect_single_char_xor(ciphertext):
 	high_score = 0
 	best_result = 0
-	for line in file:
+	for line in ciphertext.split('\n'):
 		result = single_byte_xor(line.strip())
 		if result[2] > high_score:
 			high_score = result[2]
@@ -48,10 +46,10 @@ def repeating_key_xor(input_string, key):
 		encrypted_data += chr(ord(c) ^ ord(key[i%3]))
 	return encrypted_data.encode('hex')
 
-def break_repeating_key_xor(filename):
-	file_string = open(filename, 'r').read().decode('base64')
-	data = list(file_string)
-	keysize = utils.get_keysize(file_string)[0][0]
+def break_repeating_key_xor(ciphertext):
+	ciphertext = ciphertext.decode('base64')
+	data = list(ciphertext)
+	keysize = utils.get_keysize(ciphertext)[0][0]
 	blocks = utils.get_keysized_blocks(data, keysize)
 	transposed_blocks = utils.transpose_blocks(blocks)
 	key = ''
@@ -59,30 +57,37 @@ def break_repeating_key_xor(filename):
 		key += single_byte_xor(block.encode('hex'))[1]
 	result = ''
 	keysize = len(key)
-	for i, c in enumerate(file_string):
+	for i, c in enumerate(ciphertext):
 		result += chr(ord(c) ^ ord(key[i%keysize]))
 	return key, result
 
-def decrypt_aes_ecb(filename, key):
-	ciphertext = open(filename, 'r').read().decode('base64')
+def decrypt_aes_ecb(ciphertext, key):
 	return AES.new(key, AES.MODE_ECB).decrypt(ciphertext)
 
-def decrypt_aes_ecb_string(ciphertext, key):
-	return AES.new(key, AES.MODE_ECB).decrypt(ciphertext)
-
-def detect_aes_ecb(filename):
-	ciphertext = open(filename, 'r')
+def detect_aes_ecb(ciphertext):
 	low_score = sys.maxint
 	best_line = ''
 	block_size = 16
-	for line in ciphertext:
-		blocks = []
-		for i in range(0, len(line)/block_size):
-			blocks.append(line[i*block_size:i*block_size+block_size])
-		if len(set(blocks)) < low_score:
-			low_score = len(set(blocks))
-			best_line = line
+	for line in ciphertext.split('\n'):
+		if len(line) > 0:
+			blocks = []
+			for i in range(0, len(line)/block_size):
+				blocks.append(line[i*block_size:i*block_size+block_size])
+			if len(set(blocks)) < low_score:
+				low_score = len(set(blocks))
+				best_line = line
 	return best_line
+
+def repeated_block(cipher):
+	block_size = 16
+	ciphertext = cipher(pad_pkcs7('0', 128))
+	blocks = []
+	for i in range(0, len(ciphertext)/block_size):
+		blocks.append(ciphertext[i*block_size:i*block_size+block_size])
+	if len(set(blocks)) != len(blocks):
+		return True
+	else:
+		return False
 
 def pad_pkcs7(input_string, block_size):
 	padding = block_size - len(input_string)
@@ -90,20 +95,30 @@ def pad_pkcs7(input_string, block_size):
 		input_string += struct.pack('B', padding)
 	return input_string
 
-def decrypt_aes_cbc(filename, key, iv):
+def decrypt_aes_cbc(ciphertext, key, iv):
 	block_size = 16
-	ciphertext = open(filename, 'r').read().decode('base64')
 	block = ''
 	decrypted_blocks = ''
 	for i in range(0, len(ciphertext)/block_size):
-		block = decrypt_aes_ecb_string(ciphertext[block_size*i:block_size*i+block_size], key)
+		block = decrypt_aes_ecb(ciphertext[block_size*i:block_size*i+block_size], key)
 		if i > 0:
 			decrypted_blocks += fixed_xor(block.encode('hex'), ciphertext[block_size*(i-1):block_size*i].encode('hex'))
 		else:
 			decrypted_blocks += fixed_xor(block.encode('hex'), pad_pkcs7(iv, block_size).encode('hex'))
-	return decrypted_blocks
+	return decrypted_blocks.decode('hex')
 
-def encryption_oracle(input_string):
-	return input_string
-
-
+def encrypt_random_aes(input_string):
+	key_length = 16
+	key = os.urandom(key_length)
+	iv = os.urandom(key_length)
+	if random.random() > 0.5:
+		obj = AES.new(key, AES.MODE_CBC, iv)
+		print "Using CBC Mode"
+	else:
+		obj = AES.new(key, AES.MODE_ECB)
+		print "Using ECB Mode"
+	new_string = os.urandom(random.randint(5,10)) + input_string + os.urandom(random.randint(5,10))
+	padding = 0
+	while(padding < len(new_string)):
+		padding += 16
+	return obj.encrypt(pad_pkcs7(new_string,padding))

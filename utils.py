@@ -137,3 +137,10 @@ def get_keysize(ciphertext):
 	sorted_scores = sorted(scores.items(), key=operator.itemgetter(1))
 
 	return sorted_scores
+
+def get_ciphertext(filename):
+	try:
+		ciphertext = open(filename, 'r').read()
+	except Exception as e:
+		print "Error: %s" % str(e)
+	return ciphertext
