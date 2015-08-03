@@ -67,6 +67,9 @@ def decrypt_aes_ecb(filename, key):
 	ciphertext = open(filename, 'r').read().decode('base64')
 	return AES.new(key, AES.MODE_ECB).decrypt(ciphertext)
 
+def decrypt_aes_ecb_string(ciphertext, key):
+	return AES.new(key, AES.MODE_ECB).decrypt(ciphertext)
+
 def detect_aes_ecb(filename):
 	ciphertext = open(filename, 'r')
 	low_score = sys.maxint
@@ -85,6 +88,22 @@ def pad_pkcs7(input_string, block_size):
 	padding = block_size - len(input_string)
 	while len(input_string) < block_size:
 		input_string += struct.pack('B', padding)
+	return input_string
+
+def decrypt_aes_cbc(filename, key, iv):
+	block_size = 16
+	ciphertext = open(filename, 'r').read().decode('base64')
+	block = ''
+	decrypted_blocks = ''
+	for i in range(0, len(ciphertext)/block_size):
+		block = decrypt_aes_ecb_string(ciphertext[block_size*i:block_size*i+block_size], key)
+		if i > 0:
+			decrypted_blocks += fixed_xor(block.encode('hex'), ciphertext[block_size*(i-1):block_size*i].encode('hex'))
+		else:
+			decrypted_blocks += fixed_xor(block.encode('hex'), pad_pkcs7(iv, block_size).encode('hex'))
+	return decrypted_blocks
+
+def encryption_oracle(input_string):
 	return input_string
 
 

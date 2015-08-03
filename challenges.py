@@ -14,7 +14,8 @@ CHALLENGE_NAME = {
 	7: 'AES in ECB mode',
 	8: 'Detect AES in ECB mode',
 	9: 'Implement PKCS#7 Padding',
-	10: 'Implement CBC Mode'
+	10: 'Implement CBC Mode',
+	11: 'ECB/CBC detection oracle'
 }
 
 def main(argv):
@@ -135,7 +136,14 @@ def c9():
 
 @challenge(10)
 def c10():
+	filename = "data/10.txt"
+	key = "YELLOW SUBMARINE"
+	iv = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+	print cryptopals.decrypt_aes_cbc(filename, key, iv).decode('hex')
 
+@challenge(11)
+def c11():
+	input_string = "MEANINGLESS JIBBER JABBER"
 
 if __name__ == "__main__":
 	main(sys.argv)
