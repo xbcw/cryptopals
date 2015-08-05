@@ -2,6 +2,7 @@ import sys
 import cryptopals
 import math
 import utils
+import os
 
 CHALLENGES = {}
 CHALLENGE_NAME = {
@@ -15,7 +16,8 @@ CHALLENGE_NAME = {
 	8: 'Detect AES in ECB mode',
 	9: 'Implement PKCS#7 Padding',
 	10: 'Implement CBC Mode',
-	11: 'ECB/CBC detection oracle'
+	11: 'ECB/CBC detection oracle',
+	12: 'Byte-at-a-time ECB decryption (Simple)'
 }
 
 def main(argv):
@@ -127,11 +129,11 @@ def c7():
 def c8():
 	filename = "data/8.txt"
 	ciphertext = utils.get_ciphertext(filename)
-	print cryptopals.detect_aes_ecb(ciphertext)
+	print cryptopals.get_ecb_string(ciphertext)
 
 @challenge(9)
 def c9():
-	block_size = 18
+	block_size = 20
 	input_string = "YELLOW SUBMARINE"
 	expected_result = "YELLOW SUBMARINE\x04\x04\x04\x04"
 	result = cryptopals.pad_pkcs7(input_string, block_size)
@@ -149,10 +151,23 @@ def c10():
 @challenge(11)
 def c11():
 	cipher = cryptopals.encrypt_random_aes
-	if cryptopals.repeated_block(cipher):
+	if cryptopals.detect_ecb(cipher):
 		print "Detected ECB Mode"
 	else:
 		print "Detected CBC Mode"
+
+@challenge(12)
+def c12():
+	# 'secret' setup
+	unknown_text = 'Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\naGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\ndXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\nYnkK'.decode('base64')
+	unknown_key = 'ASKD8uweJ39qifjC'
+	my_string = 'A'*32
+	ciphertext = cryptopals.encrypt_ecb_static_key_appended_text(my_string, unknown_text, unknown_key)
+
+	# crack ciphertext
+	block_size = cryptopals.get_block_size(my_string, ciphertext)
+	match_string = cryptopals.encrypt_ecb_static_key_appended_text('A'*(block_size-1), ciphertext, unknown_key)
+	print cryptopals.match_dictionary(match_string, ciphertext, block_size-1, unknown_key)
 
 if __name__ == "__main__":
 	main(sys.argv)

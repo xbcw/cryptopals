@@ -3,6 +3,8 @@ import utils
 import struct
 import os
 import random
+import difflib
+import math
 from Crypto.Cipher import AES
 
 def hex_to_base64(input_string):
@@ -64,7 +66,7 @@ def break_repeating_key_xor(ciphertext):
 def decrypt_aes_ecb(ciphertext, key):
 	return AES.new(key, AES.MODE_ECB).decrypt(ciphertext)
 
-def detect_aes_ecb(ciphertext):
+def get_ecb_string(ciphertext):
 	low_score = sys.maxint
 	best_line = ''
 	block_size = 16
@@ -78,9 +80,12 @@ def detect_aes_ecb(ciphertext):
 				best_line = line
 	return best_line
 
-def repeated_block(cipher):
+def detect_ecb(cipher):
 	block_size = 16
-	ciphertext = cipher(pad_pkcs7('0', 128))
+	ciphertext = cipher(pad_pkcs7('A', 128))
+	return detect_repeating_block(ciphertext, block_size)
+
+def detect_repeating_block(ciphertext, block_size):
 	blocks = []
 	for i in range(0, len(ciphertext)/block_size):
 		blocks.append(ciphertext[i*block_size:i*block_size+block_size])
@@ -122,3 +127,38 @@ def encrypt_random_aes(input_string):
 	while(padding < len(new_string)):
 		padding += 16
 	return obj.encrypt(pad_pkcs7(new_string,padding))
+
+def encrypt_ecb_static_key_appended_text(input_string, ciphertext, key=os.urandom(16)):
+	obj = AES.new(key, AES.MODE_ECB)
+	new_string = input_string + ciphertext
+	padding = 0
+	while(padding < len(new_string)):
+		padding += 16
+	return obj.encrypt(pad_pkcs7(new_string,padding))
+
+def get_block_size(my_string, ciphertext):
+	prev_diff = 0
+	for i in range(1, len(my_string)):
+		diff = 0
+		block = encrypt_ecb_static_key_appended_text(my_string[0:i], ciphertext)
+		for block_index,c in enumerate(block):
+			try:
+				if block[block_index] != prev_block[block_index]:
+					diff += 1
+			except:
+				diff += 1
+		if i != 1:
+			if prev_diff != diff:
+				return diff - prev_diff
+		prev_diff = diff
+	return -1
+
+def match_dictionary(match_string, ciphertext, block_size, key):
+	print match_string
+	dict = []
+	for c in range(ord(' '), ord('z')):
+		new_input_string = 'A'*block_size + chr(c)
+		encrypted_string = encrypt_ecb_static_key_appended_text(new_input_string, ciphertext, key)
+		if match_string == encrypted_string:
+			return ord(c)
+
